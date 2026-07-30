@@ -1,5 +1,6 @@
 import { Role } from "./types";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
+import { ROLE_EMAIL } from "./roleAccounts";
 
 const PLACEHOLDER_PASSWORDS: Record<Role, string> = {
   shooter: "satsuei2026",
@@ -16,15 +17,15 @@ export async function verifyPassword(
     return password === PLACEHOLDER_PASSWORDS[role];
   }
 
-  const { data, error } = await supabase.rpc("verify_role_password", {
-    p_role: role,
-    p_password: password,
+  const { error } = await supabase.auth.signInWithPassword({
+    email: ROLE_EMAIL[role],
+    password,
   });
 
   if (error) {
-    console.error("verifyPassword failed", error);
+    console.error("signInWithPassword failed", error.message);
     return false;
   }
 
-  return data === true;
+  return true;
 }

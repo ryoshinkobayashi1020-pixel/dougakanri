@@ -12,6 +12,7 @@ import {
 import { CaseStatus, Client, ContentCase, CurrentUser } from "./types";
 import { CLIENTS, SEED_CASES } from "./seed";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
+import { roleFromEmail } from "./roleAccounts";
 
 const CASES_KEY = "sns-ops:cases:v2";
 const USER_KEY = "sns-ops:current-user";
@@ -181,16 +182,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setCurrentUserState(loadUser());
-
     if (!isSupabaseConfigured) {
+      setCurrentUserState(loadUser());
       setCases(loadLocalCases());
       setClients(loadLocalClients());
       setReady(true);
       return;
     }
 
-    refreshFromSupabase().finally(() => setReady(true));
+    supabase.auth.getSession().then(({ data }) => {
+      const role = roleFromEmail(data.session?.user.email);
+      setCurrentUserState(role ? { role } : null);
+      setReady(true);
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const role = roleFromEmail(session?.user.email);
+        setCurrentUserState(role ? { role } : null);
+      },
+    );
+
+    return () => {
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !currentUser) {
+      if (!currentUser) {
+        setCases([]);
+        setClients([]);
+      }
+      return;
+    }
+
+    refreshFromSupabase();
 
     function scheduleRefresh() {
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -220,7 +247,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       supabase.removeChannel(channel);
     };
-  }, [refreshFromSupabase]);
+  }, [currentUser, refreshFromSupabase]);
 
   useEffect(() => {
     if (!ready || isSupabaseConfigured) return;
@@ -234,6 +261,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrentUser = useCallback((user: CurrentUser | null) => {
     setCurrentUserState(user);
+
+    if (isSupabaseConfigured) {
+      if (user === null) supabase.auth.signOut();
+      return;
+    }
+
     if (user) {
       window.localStorage.setItem(USER_KEY, JSON.stringify(user));
     } else {

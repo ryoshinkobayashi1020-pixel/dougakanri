@@ -1,7 +1,12 @@
 -- SNS運用ワークボード: Supabaseスキーマ
 -- Supabaseダッシュボードの SQL Editor に貼り付けて実行してください。
-
-create extension if not exists pgcrypto with schema extensions;
+--
+-- 実行後、Authentication > Users で以下の2ユーザーを作成してください:
+--   email: shooter@dougakanri.local  / password: 撮影者チームの合言葉
+--   email: editor@dougakanri.local   / password: 編集者チームの合言葉
+-- 「Auto Confirm User」に必ずチェックを入れてください（メール確認をスキップするため）。
+-- ※ メールアドレスは実在しなくてOK。役割の判定にこのメールアドレスを使うので、
+--    上記2つと完全に同じものを使ってください。
 
 -- クライアント（撮影者が登録する取引先）
 create table if not exists clients (
@@ -37,44 +42,17 @@ create table if not exists case_history (
   text text not null
 );
 
--- 役割ごとの共有パスワード（撮影者/編集者）
-create table if not exists role_passwords (
-  role text primary key check (role in ('shooter', 'editor')),
-  password_hash text not null
-);
-
-insert into role_passwords (role, password_hash) values
-  ('shooter', extensions.crypt('satsuei2026', extensions.gen_salt('bf'))),
-  ('editor', extensions.crypt('henshu2026', extensions.gen_salt('bf')))
-on conflict (role) do nothing;
-
--- パスワード照合はこの関数経由のみ（role_passwords テーブルへの直接アクセスはRLSで遮断）
-create or replace function verify_role_password(p_role text, p_password text)
-returns boolean
-language sql
-security definer
-set search_path = public, extensions
-as $$
-  select exists (
-    select 1 from role_passwords
-    where role = p_role
-      and password_hash = extensions.crypt(p_password, password_hash)
-  );
-$$;
-
-revoke all on function verify_role_password(text, text) from public;
-grant execute on function verify_role_password(text, text) to anon, authenticated;
-
 alter table clients enable row level security;
 alter table cases enable row level security;
 alter table case_history enable row level security;
-alter table role_passwords enable row level security;
 
--- チーム共有パスワードのみで守る内部ツールのため、
--- テーブルへの読み書きはanonキーに対して許可する（role_passwordsのみ関数経由に限定）
-create policy "clients_all" on clients for all using (true) with check (true);
-create policy "cases_all" on cases for all using (true) with check (true);
-create policy "case_history_all" on case_history for all using (true) with check (true);
+-- ログイン済みユーザー（Supabase Auth）のみ読み書き可能
+create policy "clients_authenticated" on clients
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "cases_authenticated" on cases
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "case_history_authenticated" on case_history
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- リアルタイム更新を有効化（複数人での同時利用を想定）
 alter publication supabase_realtime add table clients, cases, case_history;
