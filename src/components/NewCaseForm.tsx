@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Platform } from "@/lib/types";
 
-const NEW_CLIENT_VALUE = "__new__";
-
 export function NewCaseForm({
   onCancel,
   onCreate,
@@ -24,12 +22,8 @@ export function NewCaseForm({
     notes: string;
   }) => void;
 }) {
-  const { clients, addClient } = useStore();
-  const [clientChoice, setClientChoice] = useState(
-    clients[0]?.name ?? NEW_CLIENT_VALUE,
-  );
-  const [newClientName, setNewClientName] = useState("");
-  const [newClientDriveUrl, setNewClientDriveUrl] = useState("");
+  const { clients } = useStore();
+  const [clientChoice, setClientChoice] = useState(clients[0]?.name ?? "");
   const [title, setTitle] = useState("");
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [driveUrl, setDriveUrl] = useState("");
@@ -48,11 +42,8 @@ export function NewCaseForm({
   }
 
   function handleSubmit() {
-    const clientName =
-      clientChoice === NEW_CLIENT_VALUE ? newClientName.trim() : clientChoice;
-
     if (
-      !clientName ||
+      !clientChoice ||
       !title.trim() ||
       !driveUrl.trim() ||
       !editDeadline ||
@@ -68,12 +59,8 @@ export function NewCaseForm({
       return;
     }
 
-    if (clientChoice === NEW_CLIENT_VALUE) {
-      addClient(clientName, newClientDriveUrl);
-    }
-
     onCreate({
-      clientName,
+      clientName: clientChoice,
       title: title.trim(),
       platforms,
       driveUrl: driveUrl.trim(),
@@ -98,47 +85,37 @@ export function NewCaseForm({
             <label className="mb-1 block text-sm font-bold text-slate-700">
               クライアント名
             </label>
-            <select
-              value={clientChoice}
-              onChange={(e) => setClientChoice(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900"
-            >
-              {clients.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-              <option value={NEW_CLIENT_VALUE}>＋ 新しいクライアントを登録</option>
-            </select>
-            {clientChoice === NEW_CLIENT_VALUE ? (
-              <div className="mt-2 space-y-2">
-                <input
-                  value={newClientName}
-                  onChange={(e) => setNewClientName(e.target.value)}
-                  placeholder="例：カフェど・れみ"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900"
-                />
-                <input
-                  value={newClientDriveUrl}
-                  onChange={(e) => setNewClientDriveUrl(e.target.value)}
-                  placeholder="このクライアント専用のGoogleドライブフォルダURL"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900"
-                />
-              </div>
+            {clients.length === 0 ? (
+              <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm font-bold text-amber-700">
+                まだクライアントが登録されていません。先に「クライアント管理」から登録してください。
+              </p>
             ) : (
-              (() => {
-                const selected = clients.find((c) => c.name === clientChoice);
-                return selected?.driveUrl ? (
-                  <a
-                    href={selected.driveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs font-bold text-sky-700 underline"
-                  >
-                    📁 {selected.name}のドライブフォルダを開く
-                  </a>
-                ) : null;
-              })()
+              <>
+                <select
+                  value={clientChoice}
+                  onChange={(e) => setClientChoice(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900"
+                >
+                  {clients.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {(() => {
+                  const selected = clients.find((c) => c.name === clientChoice);
+                  return selected?.driveUrl ? (
+                    <a
+                      href={selected.driveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-block text-xs font-bold text-sky-700 underline"
+                    >
+                      📁 {selected.name}のドライブフォルダを開く
+                    </a>
+                  ) : null;
+                })()}
+              </>
             )}
           </div>
 
