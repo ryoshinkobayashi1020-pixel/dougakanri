@@ -15,18 +15,22 @@ export const CLIENTS: Client[] = [
   {
     name: "カフェど・れみ",
     driveUrl: "https://drive.google.com/drive/folders/example-doremi-root",
+    editorEmail: "",
   },
   {
     name: "美容室HANA",
     driveUrl: "https://drive.google.com/drive/folders/example-hana-root",
+    editorEmail: "",
   },
   {
     name: "整体院コアバランス",
     driveUrl: "https://drive.google.com/drive/folders/example-core-root",
+    editorEmail: "",
   },
   {
     name: "パーソナルジムFLEX",
     driveUrl: "https://drive.google.com/drive/folders/example-flex-root",
+    editorEmail: "",
   },
 ];
 

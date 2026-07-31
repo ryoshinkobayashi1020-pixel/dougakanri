@@ -32,8 +32,23 @@ const ACTION_STYLE: Record<string, string> = {
 
 export default function EditorPage() {
   const { currentUser, ready } = useRequireRole("editor");
-  const { cases, setStatus } = useStore();
+  const { cases, clients, setStatus } = useStore();
   const [completingId, setCompletingId] = useState<string | null>(null);
+
+  const myClientNames = useMemo(() => {
+    if (!currentUser?.email) return null;
+    return new Set(
+      clients
+        .filter((c) => c.editorEmail === currentUser.email)
+        .map((c) => c.name),
+    );
+  }, [clients, currentUser]);
+
+  const myCases = useMemo(
+    () =>
+      myClientNames ? cases.filter((c) => myClientNames.has(c.clientName)) : cases,
+    [cases, myClientNames],
+  );
 
   const columns = useMemo(() => {
     const grouped: Record<CaseStatus, ContentCase[]> = {
@@ -42,7 +57,7 @@ export default function EditorPage() {
       scheduled: [],
       completed: [],
     };
-    for (const c of cases) grouped[c.status].push(c);
+    for (const c of myCases) grouped[c.status].push(c);
     for (const status of BOARD_STATUSES) {
       grouped[status].sort(
         (a, b) =>
@@ -50,11 +65,11 @@ export default function EditorPage() {
       );
     }
     return grouped;
-  }, [cases]);
+  }, [myCases]);
 
   if (!ready || !currentUser) return null;
 
-  const completingCase = cases.find((c) => c.id === completingId) ?? null;
+  const completingCase = myCases.find((c) => c.id === completingId) ?? null;
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-8">
@@ -63,7 +78,10 @@ export default function EditorPage() {
           編集ボード
         </h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          締切が近い案件から順に並んでいます。全クライアントの案件をここで管理できます。
+          締切が近い案件から順に並んでいます。
+          {currentUser?.email
+            ? "あなたが担当するクライアントの案件だけを表示しています。"
+            : "全クライアントの案件をここで管理できます。"}
         </p>
       </div>
 

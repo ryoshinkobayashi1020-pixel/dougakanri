@@ -6,6 +6,7 @@ export type Role = "shooter" | "editor";
 
 export interface CurrentUser {
   role: Role;
+  email?: string;
 }
 
 export interface HistoryEntry {
@@ -17,6 +18,7 @@ export interface HistoryEntry {
 export interface Client {
   name: string;
   driveUrl: string;
+  editorEmail: string;
 }
 
 export interface ContentCase {

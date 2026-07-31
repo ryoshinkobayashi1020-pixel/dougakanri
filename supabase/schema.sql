@@ -1,17 +1,16 @@
 -- SNS運用ワークボード: Supabaseスキーマ
 -- Supabaseダッシュボードの SQL Editor に貼り付けて実行してください。
 --
--- 実行後、Authentication > Users で以下の2ユーザーを作成してください:
+-- 実行後、Authentication > Users で撮影者用ユーザーを作成してください:
 --   email: shooter@dougakanri.local  / password: 撮影者チームの合言葉
---   email: editor@dougakanri.local   / password: 編集者チームの合言葉
+-- 編集者は担当クライアントごとに複数アカウントを作成します（後述）。
 -- 「Auto Confirm User」に必ずチェックを入れてください（メール確認をスキップするため）。
--- ※ メールアドレスは実在しなくてOK。役割の判定にこのメールアドレスを使うので、
---    上記2つと完全に同じものを使ってください。
 
--- クライアント（撮影者が登録する取引先）
+-- クライアント（撮影者が登録する取引先。担当編集者のメールを紐づける）
 create table if not exists clients (
   name text primary key,
   drive_url text not null default '',
+  editor_email text not null default '',
   created_at timestamptz not null default now()
 );
 

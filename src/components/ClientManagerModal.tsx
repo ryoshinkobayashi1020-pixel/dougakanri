@@ -11,14 +11,23 @@ export function ClientManagerModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const { clients, cases, addClient, updateClientDriveUrl, removeClient } =
-    useStore();
+  const {
+    clients,
+    cases,
+    addClient,
+    updateClientDriveUrl,
+    updateClientEditorEmail,
+    removeClient,
+  } = useStore();
   const [newName, setNewName] = useState("");
   const [newDriveUrl, setNewDriveUrl] = useState("");
+  const [newEditorEmail, setNewEditorEmail] = useState("");
   const [error, setError] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [editingDriveFor, setEditingDriveFor] = useState<string | null>(null);
   const [draftDriveUrl, setDraftDriveUrl] = useState("");
+  const [editingEditorFor, setEditingEditorFor] = useState<string | null>(null);
+  const [draftEditorEmail, setDraftEditorEmail] = useState("");
 
   if (!open) return null;
 
@@ -29,9 +38,10 @@ export function ClientManagerModal({
       setError("そのクライアント名はすでに登録されています。");
       return;
     }
-    addClient(trimmed, newDriveUrl);
+    addClient(trimmed, newDriveUrl, newEditorEmail);
     setNewName("");
     setNewDriveUrl("");
+    setNewEditorEmail("");
     setError("");
   }
 
@@ -44,7 +54,7 @@ export function ClientManagerModal({
               クライアント管理
             </h2>
             <p className="text-xs text-slate-500">
-              登録したクライアントは案件依頼時にプルダウンで選べます
+              登録したクライアントは案件依頼時にプルダウンで選べます。担当編集者のメールを設定すると、その編集者にだけ案件が表示されます
             </p>
           </div>
           <button
@@ -68,8 +78,14 @@ export function ClientManagerModal({
           <input
             value={newDriveUrl}
             onChange={(e) => setNewDriveUrl(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder="専用Googleドライブフォルダのリンク（任意）"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900"
+          />
+          <input
+            value={newEditorEmail}
+            onChange={(e) => setNewEditorEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder="担当編集者のメールアドレス（任意）"
             className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900"
           />
           <button
@@ -91,6 +107,7 @@ export function ClientManagerModal({
             const count = cases.filter((x) => x.clientName === c.name).length;
             const confirming = confirmingDelete === c.name;
             const editingDrive = editingDriveFor === c.name;
+            const editingEditor = editingEditorFor === c.name;
             return (
               <li
                 key={c.name}
@@ -170,6 +187,49 @@ export function ClientManagerModal({
                       className="text-xs font-bold text-slate-400 hover:text-slate-600"
                     >
                       ＋ ドライブフォルダを設定
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-1.5">
+                  {editingEditor ? (
+                    <div className="flex gap-1.5">
+                      <input
+                        autoFocus
+                        value={draftEditorEmail}
+                        onChange={(e) => setDraftEditorEmail(e.target.value)}
+                        placeholder="editor-xxx@dougakanri.local"
+                        className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-slate-900"
+                      />
+                      <button
+                        onClick={() => {
+                          updateClientEditorEmail(c.name, draftEditorEmail);
+                          setEditingEditorFor(null);
+                        }}
+                        className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white"
+                      >
+                        保存
+                      </button>
+                    </div>
+                  ) : c.editorEmail ? (
+                    <button
+                      onClick={() => {
+                        setEditingEditorFor(c.name);
+                        setDraftEditorEmail(c.editorEmail);
+                      }}
+                      className="flex items-center gap-1 text-xs font-bold text-violet-700 hover:underline"
+                    >
+                      ✂️ 担当編集者: {c.editorEmail}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingEditorFor(c.name);
+                        setDraftEditorEmail("");
+                      }}
+                      className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                    >
+                      ＋ 担当編集者を設定
                     </button>
                   )}
                 </div>

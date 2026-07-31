@@ -16,7 +16,7 @@ import { roleFromEmail } from "./roleAccounts";
 
 const CASES_KEY = "sns-ops:cases:v2";
 const USER_KEY = "sns-ops:current-user";
-const CLIENTS_KEY = "sns-ops:clients:v2";
+const CLIENTS_KEY = "sns-ops:clients:v3";
 
 function isValidCase(c: unknown): c is ContentCase {
   if (!c || typeof c !== "object") return false;
@@ -51,7 +51,11 @@ function loadUser(): CurrentUser | null {
 function isValidClient(c: unknown): c is Client {
   if (!c || typeof c !== "object") return false;
   const r = c as Record<string, unknown>;
-  return typeof r.name === "string" && typeof r.driveUrl === "string";
+  return (
+    typeof r.name === "string" &&
+    typeof r.driveUrl === "string" &&
+    typeof r.editorEmail === "string"
+  );
 }
 
 function loadLocalClients(): Client[] {
@@ -127,13 +131,17 @@ async function fetchCasesFromSupabase(): Promise<ContentCase[]> {
 async function fetchClientsFromSupabase(): Promise<Client[]> {
   const { data, error } = await supabase
     .from("clients")
-    .select("name, drive_url")
+    .select("name, drive_url, editor_email")
     .order("created_at", { ascending: true });
   if (error) {
     console.error("fetchClients failed", error);
     return [];
   }
-  return (data ?? []).map((c) => ({ name: c.name, driveUrl: c.drive_url }));
+  return (data ?? []).map((c) => ({
+    name: c.name,
+    driveUrl: c.drive_url,
+    editorEmail: c.editor_email ?? "",
+  }));
 }
 
 interface StoreValue {
@@ -142,8 +150,9 @@ interface StoreValue {
   currentUser: CurrentUser | null;
   ready: boolean;
   setCurrentUser: (user: CurrentUser | null) => void;
-  addClient: (name: string, driveUrl?: string) => void;
+  addClient: (name: string, driveUrl?: string, editorEmail?: string) => void;
   updateClientDriveUrl: (name: string, driveUrl: string) => void;
+  updateClientEditorEmail: (name: string, editorEmail: string) => void;
   removeClient: (name: string) => void;
   addCase: (
     input: Omit<
@@ -191,15 +200,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(({ data }) => {
-      const role = roleFromEmail(data.session?.user.email);
-      setCurrentUserState(role ? { role } : null);
+      const email = data.session?.user.email;
+      const role = roleFromEmail(email);
+      setCurrentUserState(role ? { role, email } : null);
       setReady(true);
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        const role = roleFromEmail(session?.user.email);
-        setCurrentUserState(role ? { role } : null);
+        const email = session?.user.email;
+        const role = roleFromEmail(email);
+        setCurrentUserState(role ? { role, email } : null);
       },
     );
 
@@ -275,7 +286,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addClient = useCallback(
-    async (name: string, driveUrl = "") => {
+    async (name: string, driveUrl = "", editorEmail = "") => {
       const trimmed = name.trim();
       if (!trimmed) return;
 
@@ -283,14 +294,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setClients((prev) =>
           prev.some((c) => c.name === trimmed)
             ? prev
-            : [...prev, { name: trimmed, driveUrl: driveUrl.trim() }],
+            : [
+                ...prev,
+                {
+                  name: trimmed,
+                  driveUrl: driveUrl.trim(),
+                  editorEmail: editorEmail.trim(),
+                },
+              ],
         );
         return;
       }
 
-      const { error } = await supabase
-        .from("clients")
-        .insert({ name: trimmed, drive_url: driveUrl.trim() });
+      const { error } = await supabase.from("clients").insert({
+        name: trimmed,
+        drive_url: driveUrl.trim(),
+        editor_email: editorEmail.trim(),
+      });
       if (error && error.code !== "23505") {
         console.error("addClient failed", error);
         return;
@@ -317,6 +337,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .eq("name", name);
       if (error) {
         console.error("updateClientDriveUrl failed", error);
+        return;
+      }
+      await refreshFromSupabase();
+    },
+    [refreshFromSupabase],
+  );
+
+  const updateClientEditorEmail = useCallback(
+    async (name: string, editorEmail: string) => {
+      if (!isSupabaseConfigured) {
+        setClients((prev) =>
+          prev.map((c) =>
+            c.name === name ? { ...c, editorEmail: editorEmail.trim() } : c,
+          ),
+        );
+        return;
+      }
+
+      const { error } = await supabase
+        .from("clients")
+        .update({ editor_email: editorEmail.trim() })
+        .eq("name", name);
+      if (error) {
+        console.error("updateClientEditorEmail failed", error);
         return;
       }
       await refreshFromSupabase();
@@ -528,6 +572,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser,
       addClient,
       updateClientDriveUrl,
+      updateClientEditorEmail,
       removeClient,
       addCase,
       updateCase,
@@ -543,6 +588,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser,
       addClient,
       updateClientDriveUrl,
+      updateClientEditorEmail,
       removeClient,
       addCase,
       updateCase,

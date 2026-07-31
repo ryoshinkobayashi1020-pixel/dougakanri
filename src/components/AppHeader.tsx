@@ -50,6 +50,11 @@ export function AppHeader() {
             <span className="block text-xs font-bold text-slate-700">
               {theme.label}としてログイン中
             </span>
+            {currentUser.email && currentUser.role === "editor" && (
+              <span className="block text-[10px] font-medium text-slate-400">
+                {currentUser.email}
+              </span>
+            )}
           </span>
           <span className="text-[10px] font-bold text-slate-300 group-hover:text-slate-500">
             ログアウト
