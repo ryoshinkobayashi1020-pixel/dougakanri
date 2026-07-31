@@ -12,7 +12,7 @@ import {
 import { CaseStatus, Client, ContentCase, CurrentUser } from "./types";
 import { CLIENTS, SEED_CASES } from "./seed";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
-import { roleFromEmail } from "./roleAccounts";
+import { registerEditorEmail, roleFromEmail } from "./roleAccounts";
 
 const CASES_KEY = "sns-ops:cases:v2";
 const USER_KEY = "sns-ops:current-user";
@@ -315,6 +315,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         console.error("addClient failed", error);
         return;
       }
+      if (editorEmail.trim()) await registerEditorEmail(editorEmail);
       await refreshFromSupabase();
     },
     [refreshFromSupabase],
@@ -363,6 +364,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         console.error("updateClientEditorEmail failed", error);
         return;
       }
+      if (editorEmail.trim()) await registerEditorEmail(editorEmail);
       await refreshFromSupabase();
     },
     [refreshFromSupabase],

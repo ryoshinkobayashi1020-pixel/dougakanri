@@ -41,9 +41,16 @@ create table if not exists case_history (
   text text not null
 );
 
+-- 編集者アカウントのメール一覧（ログイン時にパスワードだけで本人を特定するために使用）
+create table if not exists editor_accounts (
+  email text primary key,
+  created_at timestamptz not null default now()
+);
+
 alter table clients enable row level security;
 alter table cases enable row level security;
 alter table case_history enable row level security;
+alter table editor_accounts enable row level security;
 
 -- ログイン済みユーザー（Supabase Auth）のみ読み書き可能
 create policy "clients_authenticated" on clients
@@ -52,6 +59,16 @@ create policy "cases_authenticated" on cases
   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "case_history_authenticated" on case_history
   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- メールアドレス自体は機密ではないため、ログイン前でも一覧取得を許可
+create policy "editor_accounts_select_all" on editor_accounts
+  for select using (true);
+create policy "editor_accounts_write_authenticated" on editor_accounts
+  for insert with check (auth.role() = 'authenticated');
+create policy "editor_accounts_update_authenticated" on editor_accounts
+  for update using (auth.role() = 'authenticated');
+create policy "editor_accounts_delete_authenticated" on editor_accounts
+  for delete using (auth.role() = 'authenticated');
 
 -- リアルタイム更新を有効化（複数人での同時利用を想定）
 alter publication supabase_realtime add table clients, cases, case_history;
