@@ -39,13 +39,13 @@ export default function Home() {
     if (!role || !password) return;
     setChecking(true);
     setError("");
-    const ok = await verifyPassword(role, password);
+    const result = await verifyPassword(role, password);
     setChecking(false);
-    if (!ok) {
+    if (!result.ok) {
       setError("パスワードが違います。");
       return;
     }
-    setCurrentUser({ role });
+    setCurrentUser({ role, email: result.email });
     router.push(role === "shooter" ? "/shooter" : "/editor");
   }
 

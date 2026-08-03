@@ -7,14 +7,19 @@ const PLACEHOLDER_PASSWORDS: Record<Role, string> = {
   editor: "henshu2026",
 };
 
+interface LoginResult {
+  ok: boolean;
+  email?: string;
+}
+
 export async function verifyPassword(
   role: Role,
   password: string,
-): Promise<boolean> {
-  if (!password) return false;
+): Promise<LoginResult> {
+  if (!password) return { ok: false };
 
   if (!isSupabaseConfigured) {
-    return password === PLACEHOLDER_PASSWORDS[role];
+    return { ok: password === PLACEHOLDER_PASSWORDS[role] };
   }
 
   if (role === "shooter") {
@@ -22,7 +27,7 @@ export async function verifyPassword(
       email: SHOOTER_EMAIL,
       password,
     });
-    return !error;
+    return { ok: !error, email: SHOOTER_EMAIL };
   }
 
   const editorEmails = await fetchEditorEmails();
@@ -31,8 +36,8 @@ export async function verifyPassword(
       email,
       password,
     });
-    if (!error) return true;
+    if (!error) return { ok: true, email };
   }
 
-  return false;
+  return { ok: false };
 }
