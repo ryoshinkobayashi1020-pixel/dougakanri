@@ -23,7 +23,6 @@ export default function Home() {
   const { currentUser, setCurrentUser, ready } = useStore();
   const router = useRouter();
   const [role, setRole] = useState<Role | null>(null);
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
@@ -38,17 +37,12 @@ export default function Home() {
 
   async function handleStart() {
     if (!role || !password) return;
-    if (role === "editor" && !email) return;
     setChecking(true);
     setError("");
-    const ok = await verifyPassword(role, password, email);
+    const ok = await verifyPassword(role, password);
     setChecking(false);
     if (!ok) {
-      setError(
-        role === "editor"
-          ? "メールアドレスかパスワードが違います。"
-          : "パスワードが違います。",
-      );
+      setError("パスワードが違います。");
       return;
     }
     setCurrentUser({ role });
@@ -84,7 +78,6 @@ export default function Home() {
                 type="button"
                 onClick={() => {
                   setRole(r);
-                  setEmail("");
                   setPassword("");
                   setError("");
                 }}
@@ -128,30 +121,11 @@ export default function Home() {
 
         {role && (
           <div className="mx-auto mt-5 max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            {role === "editor" && (
-              <>
-                <p className="mb-2 text-sm font-bold text-slate-700">
-                  担当編集者のメールアドレス
-                </p>
-                <input
-                  autoFocus
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setError("");
-                  }}
-                  placeholder="editor-xxx@dougakanri.local"
-                  className="mb-3 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
-                />
-              </>
-            )}
-
             <p className="mb-2 text-sm font-bold text-slate-700">
               {ROLE_THEME[role].label}用パスワード
             </p>
             <input
-              autoFocus={role === "shooter"}
+              autoFocus
               type="password"
               value={password}
               onChange={(e) => {
@@ -168,7 +142,7 @@ export default function Home() {
 
             <button
               type="button"
-              disabled={!password || (role === "editor" && !email) || checking}
+              disabled={!password || checking}
               onClick={handleStart}
               className={`mt-3 w-full rounded-2xl bg-gradient-to-r ${ROLE_THEME[role].gradient} px-4 py-3 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none`}
             >
@@ -177,7 +151,7 @@ export default function Home() {
             <p className="mt-3 text-center text-xs text-slate-400">
               {role === "shooter"
                 ? "チーム内で共有しているパスワードを入力してください。"
-                : "ご自身のメールアドレスとパスワードを入力してください。"}
+                : "ご自身のパスワードを入力してください。"}
             </p>
           </div>
         )}
